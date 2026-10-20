@@ -1,0 +1,409 @@
+@baseUrl = http://localhost:5201
+@contentType = application/json
+
+# ---------------------------------------------------------------------------
+# PRACTICA 2.2 - SISTEMA DE VENTAS
+# Backend ASP.NET Core -> Convex (https://hip-salamander-559.convex.site)
+#
+# Cómo usar:
+#   1. dotnet run   (en practica2.2_backend)
+#   2. Ejecutar "Cargar datos de demostración" una sola vez.
+#   3. Ejecutar "Listar productos" y copiar un _id real en @productId.
+#   4. Ejecutar "Listar clientes" y copiar un _id real en @customerId.
+# ---------------------------------------------------------------------------
+
+@productId = PEGAR_ID_DE_PRODUCTO
+@customerId = PEGAR_ID_DE_CLIENTE
+@saleId = PEGAR_ID_DE_VENTA
+@alertId = PEGAR_ID_DE_ALERTA
+
+# ===========================================================================
+# 1. UTILIDADES
+# ===========================================================================
+
+### 1.1 Estado de la API y de la conexión con Convex
+GET {{baseUrl}}/api/health
+Accept: application/json
+
+### 1.2 Cargar datos de demostración (idempotente: sólo siembra si está vacío)
+POST {{baseUrl}}/api/seed
+Content-Type: {{contentType}}
+
+# ===========================================================================
+# 2. PRODUCTOS
+# ===========================================================================
+
+### 2.1 Listar todos los productos
+GET {{baseUrl}}/api/products
+Accept: application/json
+
+### 2.2 Filtrar por texto y categoría
+GET {{baseUrl}}/api/products?q=laptop&category=electronica
+Accept: application/json
+
+### 2.3 Incluir también los inactivos
+GET {{baseUrl}}/api/products?includeInactive=true
+Accept: application/json
+
+### 2.4 Obtener un producto por id
+GET {{baseUrl}}/api/products/{{productId}}
+Accept: application/json
+
+### 2.5 Producto inexistente -> 404 PRODUCT_NOT_FOUND
+GET {{baseUrl}}/api/products/000000000000000000000000
+Accept: application/json
+
+### 2.6 Crear producto (201)
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "sku": "ELE-010",
+  "name": "Audífonos Bluetooth",
+  "description": "Audífonos inalámbricos con cancelación de ruido",
+  "category": "electronica",
+  "price": 320000,
+  "stock": 15,
+  "minStock": 5
+}
+
+### 2.7 Crear producto con SKU repetido -> 409 DUPLICATE_SKU
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "sku": "ELE-001",
+  "name": "Producto duplicado",
+  "category": "electronica",
+  "price": 1000,
+  "stock": 1,
+  "minStock": 1
+}
+
+### 2.8 Validación: faltan campos y el precio es negativo -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "sku": "A",
+  "name": "",
+  "category": "",
+  "price": -5,
+  "stock": -1,
+  "minStock": -2
+}
+
+### 2.9 Validación de tipos: price como texto -> 400 INVALID_REQUEST_BODY
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "sku": "ELE-011",
+  "name": "Producto con precio inválido",
+  "category": "electronica",
+  "price": "abc",
+  "stock": 10,
+  "minStock": 2
+}
+
+### 2.10 Validación de tipos: stock decimal -> 400 INVALID_REQUEST_BODY
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "sku": "ELE-012",
+  "name": "Producto con stock decimal",
+  "category": "electronica",
+  "price": 1000,
+  "stock": 1.5,
+  "minStock": 2
+}
+
+### 2.11 Validación de formato de SKU -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/products
+Content-Type: {{contentType}}
+
+{
+  "sku": "sku con espacios!",
+  "name": "Producto con SKU inválido",
+  "category": "electronica",
+  "price": 1000,
+  "stock": 1,
+  "minStock": 1
+}
+
+### 2.12 Actualizar producto (parcial)
+PUT {{baseUrl}}/api/products/{{productId}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Laptop 14 pulgadas Ryzen 7",
+  "price": 2599000,
+  "minStock": 5
+}
+
+### 2.13 Actualizar sin enviar campos -> 400 VALIDATION_ERROR
+PUT {{baseUrl}}/api/products/{{productId}}
+Content-Type: {{contentType}}
+
+{}
+
+### 2.14 Ajustar stock (+10)
+POST {{baseUrl}}/api/products/{{productId}}/stock
+Content-Type: {{contentType}}
+
+{
+  "delta": 10
+}
+
+### 2.15 Ajustar stock (-5)
+POST {{baseUrl}}/api/products/{{productId}}/stock
+Content-Type: {{contentType}}
+
+{
+  "delta": -5
+}
+
+### 2.16 Ajustar stock a cero -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/products/{{productId}}/stock
+Content-Type: {{contentType}}
+
+{
+  "delta": 0
+}
+
+### 2.17 Eliminar producto -> 200
+DELETE {{baseUrl}}/api/products/{{productId}}
+Accept: application/json
+
+# ===========================================================================
+# 3. CLIENTES
+# ===========================================================================
+
+### 3.1 Listar clientes
+GET {{baseUrl}}/api/customers
+Accept: application/json
+
+### 3.2 Buscar clientes
+GET {{baseUrl}}/api/customers?q=ana
+Accept: application/json
+
+### 3.3 Obtener cliente por id
+GET {{baseUrl}}/api/customers/{{customerId}}
+Accept: application/json
+
+### 3.4 Crear cliente (201)
+POST {{baseUrl}}/api/customers
+Content-Type: {{contentType}}
+
+{
+  "document": "1094900009",
+  "name": "Laura Sofía Gómez",
+  "email": "laura.gomez@correo.com",
+  "phone": "3201112233",
+  "type": "vip"
+}
+
+### 3.5 Documento duplicado -> 409 DUPLICATE_DOCUMENT
+POST {{baseUrl}}/api/customers
+Content-Type: {{contentType}}
+
+{
+  "document": "1094900001",
+  "name": "Cliente repetido",
+  "email": "otro.correo@correo.com",
+  "phone": "3009998877",
+  "type": "regular"
+}
+
+### 3.6 Correo con formato inválido -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/customers
+Content-Type: {{contentType}}
+
+{
+  "document": "1094900010",
+  "name": "Cliente sin correo válido",
+  "email": "correo-invalido",
+  "phone": "3009998877",
+  "type": "regular"
+}
+
+### 3.7 Tipo de cliente no permitido -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/customers
+Content-Type: {{contentType}}
+
+{
+  "document": "1094900011",
+  "name": "Cliente con tipo inválido",
+  "email": "tipo@correo.com",
+  "phone": "3009998877",
+  "type": "platino"
+}
+
+### 3.8 Actualizar cliente
+PUT {{baseUrl}}/api/customers/{{customerId}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Ana María Rodríguez Pérez",
+  "phone": "3001112233"
+}
+
+### 3.9 Eliminar (baja lógica) cliente -> 200
+DELETE {{baseUrl}}/api/customers/{{customerId}}
+Accept: application/json
+
+# ===========================================================================
+# 4. VENTAS
+# ===========================================================================
+
+### 4.1 Listar las últimas ventas
+GET {{baseUrl}}/api/sales
+Accept: application/json
+
+### 4.2 Listar ventas pagadas (máximo 10)
+GET {{baseUrl}}/api/sales?limit=10&status=pagada
+Accept: application/json
+
+### 4.3 Obtener venta por id
+GET {{baseUrl}}/api/sales/{{saleId}}
+Accept: application/json
+
+### 4.4 Crear venta aplicando la mejor estrategia de descuento (201)
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 2 }
+  ],
+  "paymentMethod": "efectivo",
+  "discountStrategy": "mejor",
+  "taxRate": 0.19
+}
+
+### 4.5 Crear venta sin descuento
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 1 }
+  ],
+  "paymentMethod": "tarjeta",
+  "discountStrategy": "ninguno"
+}
+
+### 4.6 Crear venta con descuento por volumen (5 % desde 5 unidades)
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 6 }
+  ],
+  "paymentMethod": "transferencia",
+  "discountStrategy": "volumen"
+}
+
+### 4.7 Validación: venta sin líneas -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [],
+  "paymentMethod": "efectivo"
+}
+
+### 4.8 Validación: cantidad cero -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 0 }
+  ],
+  "paymentMethod": "efectivo"
+}
+
+### 4.9 Validación: producto repetido -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 1 },
+    { "productId": "{{productId}}", "quantity": 2 }
+  ],
+  "paymentMethod": "efectivo"
+}
+
+### 4.10 Validación: medio de pago no permitido -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 1 }
+  ],
+  "paymentMethod": "bitcoin"
+}
+
+### 4.11 Stock insuficiente -> 409 CONFLICT
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 999999 }
+  ],
+  "paymentMethod": "efectivo"
+}
+
+### 4.12 Cliente inexistente -> 404 CUSTOMER_NOT_FOUND
+POST {{baseUrl}}/api/sales
+Content-Type: {{contentType}}
+
+{
+  "customerId": "000000000000000000000000",
+  "items": [
+    { "productId": "{{productId}}", "quantity": 1 }
+  ],
+  "paymentMethod": "efectivo"
+}
+
+### 4.13 Anular venta (devuelve el stock)
+POST {{baseUrl}}/api/sales/{{saleId}}/cancel
+Content-Type: {{contentType}}
+
+### 4.14 Anular dos veces la misma venta -> 409 SALE_ALREADY_CANCELLED
+POST {{baseUrl}}/api/sales/{{saleId}}/cancel
+Content-Type: {{contentType}}
+
+# ===========================================================================
+# 5. REPORTES Y OBSERVER DE STOCK
+# ===========================================================================
+
+### 5.1 Resumen del tablero (totales, top productos, ventas recientes, stock bajo)
+GET {{baseUrl}}/api/reports/summary
+Accept: application/json
+
+### 5.2 Productos con stock bajo
+GET {{baseUrl}}/api/reports/low-stock
+Accept: application/json
+
+### 5.3 Alertas persistidas por el patrón Observer
+GET {{baseUrl}}/api/reports/alerts
+Accept: application/json
+
+### 5.4 Reconocer una alerta
+POST {{baseUrl}}/api/reports/alerts/{{alertId}}/ack
+Content-Type: {{contentType}}

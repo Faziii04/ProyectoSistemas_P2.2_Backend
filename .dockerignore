@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+Dockerfile
+.dockerignore
+practica2.2_backend.http
+Properties/launchSettings.json
